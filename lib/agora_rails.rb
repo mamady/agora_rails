@@ -1,8 +1,7 @@
-require "agora_rails/version"
-require "agora_rails/configuration"
-require "agora_rails/token_generator"
-require "agora_rails/cloud_recording"
-require "agora_rails/stt"
+require_relative "agora_rails/configuration"
+require_relative "agora_rails/token_generator"
+require_relative "agora_rails/cloud_recording"
+require_relative "agora_rails/stt"
 
 module AgoraRails
   class Error < StandardError; end

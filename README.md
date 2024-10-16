@@ -1,6 +1,6 @@
 # AgoraRails
 
-AgoraRails is a Ruby gem that provides an interface for Agora.io APIs, specifically designed for Ruby on Rails applications. It offers functionality for generating dynamic tokens, managing cloud recording, and enabling Speech-to-Text (STT) features.
+AgoraRails is a Ruby gem that provides an interface for Agora.io APIs, specifically designed for Ruby on Rails. It offers functionality for generating dynamic tokens, managing cloud recording, and enabling Speech-to-Text (STT) features.
 
 ## Installation
 
@@ -36,10 +36,16 @@ Generate a token for a specific channel and user:
 ```ruby
 channel_name = 'my_channel'
 uid = '1234'
-role = AgoraRails::Roles::PUBLISHER
+role = 1 # Use 1 for PUBLISHER role
 expire_time_in_seconds = 3600 # 1 hour
 token = AgoraRails::TokenGenerator.generate(channel_name, uid, role, expire_time_in_seconds)
 ```
+
+Note: The `role` parameter uses integer values:
+- 0: ATTENDEE
+- 1: PUBLISHER
+- 2: SUBSCRIBER
+- 101: ADMIN
 
 ### Cloud Recording
 

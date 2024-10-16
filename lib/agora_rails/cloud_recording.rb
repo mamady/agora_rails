@@ -10,6 +10,7 @@ module AgoraRails
       @customer_key = AgoraRails.configuration.customer_key
       @customer_secret = AgoraRails.configuration.customer_secret
       @auth = { username: @customer_key, password: @customer_secret }
+      @resource_id = nil
     end
 
     def acquire_resource(channel_name, uid)
@@ -22,11 +23,12 @@ module AgoraRails
           clientRequest: { resourceExpiredHour: 24 }
         }.to_json
       )
-      handle_response(response)
+      @resource_id = handle_response(response)['resourceId']
     end
 
-    def start_recording(resource_id, channel_name, uid, recording_config)
-      response = self.class.post("/#{@app_id}/cloud_recording/resourceid/#{resource_id}/mode/mix/start",
+    def start(channel_name, uid, recording_config)
+      acquire_resource(channel_name, uid)
+      response = self.class.post("/#{@app_id}/cloud_recording/resourceid/#{@resource_id}/mode/mix/start",
         basic_auth: @auth,
         headers: { 'Content-Type' => 'application/json' },
         body: {
@@ -38,8 +40,10 @@ module AgoraRails
       handle_response(response)
     end
 
-    def stop_recording(resource_id, sid, channel_name, uid)
-      response = self.class.post("/#{@app_id}/cloud_recording/resourceid/#{resource_id}/sid/#{sid}/mode/mix/stop",
+    def stop(channel_name, uid, resource_id, sid)
+      acquire_resource(channel_name, uid) if @resource_id.nil?
+
+      response = self.class.post("/#{@app_id}/cloud_recording/resourceid/#{@resource_id}/sid/#{sid}/mode/mix/stop",
         basic_auth: @auth,
         headers: { 'Content-Type' => 'application/json' },
         body: {
