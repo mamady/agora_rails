@@ -67,9 +67,15 @@ RSpec.describe AgoraRails::CloudRecording do
 
   describe '#stop' do
     let(:stop_response) { { 'resourceId' => resource_id, 'sid' => sid } }
+    let(:acquire_response) { { 'resourceId' => resource_id, 'sid' => sid } }
 
     before do
+      # Stub the acquire_resource call
+      allow_any_instance_of(described_class).to receive(:acquire_resource).and_return(resource_id)
+
+      # Stub both the acquire and stop API calls
       allow(described_class).to receive(:post).and_return(
+        double(success?: true, body: acquire_response.to_json, parsed_response: acquire_response),
         double(success?: true, body: stop_response.to_json, parsed_response: stop_response)
       )
     end
@@ -78,15 +84,23 @@ RSpec.describe AgoraRails::CloudRecording do
       result = described_class.new.stop(channel_name, uid, resource_id, sid)
       
       expect(result).to eq(stop_response)
-      expect(described_class).to have_received(:post) do |url, options|
-        expect(url).to include("/#{app_id}/cloud_recording/resourceid/#{resource_id}/sid/#{sid}/mode/mix/stop")
+      expect(described_class).to have_received(:post).twice do |url, options|
         expect(options[:basic_auth]).to eq({ username: customer_key, password: customer_secret })
         expect(options[:headers]).to include('Content-Type' => 'application/json')
-        expect(JSON.parse(options[:body])).to include(
-          'cname' => channel_name,
-          'uid' => uid.to_s,
-          'clientRequest' => {}
-        )
+        if url.include?('acquire')
+          expect(JSON.parse(options[:body])).to include(
+            'cname' => channel_name,
+            'uid' => uid.to_s,
+            'clientRequest' => { 'resourceExpiredHour' => 24 }
+          )
+        elsif url.include?('stop')
+          expect(url).to include("/#{app_id}/cloud_recording/resourceid/#{resource_id}/sid/#{sid}/mode/mix/stop")
+          expect(JSON.parse(options[:body])).to include(
+            'cname' => channel_name,
+            'uid' => uid.to_s,
+            'clientRequest' => {}
+          )
+        end
       end
     end
 
