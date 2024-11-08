@@ -5,11 +5,11 @@ Gem::Specification.new do |spec|
   spec.email         = ["mo@usechance.com"]
 
   spec.summary       = "Ruby interface for Agora.io APIs"
-  spec.description   = "Provides functionality for Agora.io token generation, cloud recording, and speech-to-text"
+  spec.description   = "Provides functionality for Agora.io token generation and cloud recording"
   spec.homepage      = "https://github.com/mamady/agora_rails"
   spec.license       = "MIT"
 
-  spec.files         = Dir["{lib}/**/*", "LICENSE", "README.md"]
+  spec.files         = Dir["{lib}/**/*", "README.md"]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "rails", ">= 5.0"
