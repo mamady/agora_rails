@@ -45,11 +45,11 @@ DynamicKey2 requires `uid` to be an integer (i.e. not a string).
 Generate a token for a specific channel and user:
 
 ```ruby
-channel_name = 'my_channel'
-uid = 1234
+my_channel_name = 'my_channel'
+my_uid = 1234
 
 recorder = AgoraRails::CloudRecording.new
-token = recorder.generate_token(channel_name, uid)
+token = recorder.generate_token(channel_name: my_channel_name, uid: my_uid)
 ```
 You can validate the token at https://api-agora.solutions/
 
@@ -59,11 +59,19 @@ You can validate the token at https://api-agora.solutions/
 Start cloud recording for a channel:
 
 ```ruby
-channel_name = 'my_channel'
-uid = 1234
 recorder = AgoraRails::CloudRecording.new
-recorder.start(channel_name, uid)
+sid = recorder.start(channel_name: "my_channel_name", uid: 1234)
 ```
+
+Using the above method assumes that you dont plan to `query` the recording, or `stop` the recording. It will "acquire" a resource and start the recording by itself.
+If you plan to `query` the recording, or `stop` the recording, you will need to use the `resource_id` that is returned from the `acquire_resource` method, as shown below.
+
+```ruby
+recorder = AgoraRails::CloudRecording.new
+resource_id = recorder.acquire_resource(channel_name: "my_channel", uid: 1234)
+sid = recorder.start(channel_name: "my_channel", uid: 1234, resource_id: resource_id)
+```
+
 
 Stop cloud recording for a channel:
 
@@ -77,8 +85,7 @@ If you don't have the CloudRecording object, you can use the following method to
 
 ```ruby
 recorder = AgoraRails::CloudRecording.new
-recorder.stop(channel_name, sid, uid, mode)
-
+recorder.stop(channel_name: "my_channel", resource_id: "321cba", sid: "abc123", uid: 1234, mode: "mix")
 ```
 
 

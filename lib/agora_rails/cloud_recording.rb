@@ -8,7 +8,7 @@ module AgoraRails
     
     debug_output $stdout # uncomment this for debugging i.e. output to stdout
 
-    attr_accessor :app_id, :app_certificate, :customer_key, :customer_secret, :auth, :resource_id, :uid, :bucket, :access_key, :secret_key, :sid, :channel_name, :mode
+    attr_accessor :app_id, :app_certificate, :customer_key, :customer_secret, :auth, :resource_id, :uid, :bucket, :access_key, :secret_key, :sid, :channel_name, :mode, :file_prefix
 
     def initialize
       self.app_id = AgoraRails.configuration.app_id
@@ -18,9 +18,12 @@ module AgoraRails
       self.auth = { username: customer_key, password: customer_secret }
       self.uid = "#{rand(2_000_000_000..3_000_000_000)}"
       self.mode = 'mix'
+      self.file_prefix = AgoraRails.configuration.file_prefix || ''
     end
 
-    def acquire_resource(channel_name, uid = nil)
+    def acquire_resource(opts)
+      channel_name, uid = opts.values_at(:channel_name, :uid)
+      raise "Invalid Channel Name" if channel_name.nil?
       self.channel_name = channel_name
       self.uid = uid if uid
       response = self.class.post("/#{app_id}/cloud_recording/acquire",
@@ -32,17 +35,18 @@ module AgoraRails
           clientRequest: { resourceExpiredHour: 24 }
         }.to_json
       )
-      self.resource_id = handle_response(response)['resourceId']
+      handle_response(response)['resourceId']
     end
 
-    def start(channel_name, uid = nil, mode = nil, recording_config = nil)
-      raise "Invalid Channel Name" if channel_name.nil?
-      self.channel_name = channel_name
+    def start(opts = {})
+      channel_name, uid, resource_id, mode, recording_config = opts.values_at(:channel_name, :uid, :resource_id, :mode, :recording_config)
+      raise "Invalid Channel Name" if self.channel_name.nil? && channel_name.nil?
+      self.channel_name = channel_name if channel_name
       self.uid = uid if uid
       self.mode = mode if mode
-      acquire_resource(channel_name)
+      self.resource_id = resource_id || acquire_resource(channel_name: channel_name, uid: self.uid)
       recording_config ||= default_recording_config(channel_name, self.uid)
-      
+
       response = self.class.post("/#{app_id}/cloud_recording/resourceid/#{resource_id}/mode/#{self.mode}/start",
         basic_auth: auth,
         headers: { 'Content-Type' => 'application/json' },
@@ -51,15 +55,16 @@ module AgoraRails
       self.sid = handle_response(response)['sid']
     end
 
-    def stop(channel_name = nil, sid = nil, uid = nil, mode = nil)
+    def stop(opts)
+      channel_name, resource_id, sid, uid, mode = opts.values_at(:channel_name, :resource_id, :sid, :uid, :mode)
       raise "Invalid Channel Name" if channel_name.nil? && self.channel_name.nil?
+      raise "Invalid Resource ID" if resource_id.nil? && self.resource_id.nil?
       raise "Invalid SID" if sid.nil? && self.sid.nil?
       self.channel_name = channel_name if channel_name
+      self.resource_id = resource_id if resource_id
       self.sid = sid if sid
       self.uid = uid if uid
       self.mode = mode if mode
-
-      acquire_resource(self.channel_name) if self.resource_id.nil? # FIXME: should pass resource_id in because it is possible that the resource ID is expired or acquired for another channel
 
       response = self.class.post("/#{app_id}/cloud_recording/resourceid/#{self.resource_id}/sid/#{self.sid}/mode/#{self.mode}/stop",
         basic_auth: auth,
@@ -73,9 +78,15 @@ module AgoraRails
       handle_response(response)
     end
 
-    def query(channel_name = nil)
-      self.channel_name = channel_name if channel_name
-      response = self.class.get("/#{app_id}/cloud_recording/resourceid/#{self.resource_id}/sid/#{self.sid}/mode/#{mode}/query",
+    def query(opts)
+      resource_id, sid, mode = opts.values_at(:resource_id, :sid, :mode)
+      raise "Invalid Resource ID" if resource_id.nil? && self.resource_id.nil?
+      raise "Invalid SID" if sid.nil? && self.sid.nil?
+      self.resource_id = resource_id if resource_id
+      self.sid = sid if sid
+      self.mode = mode if mode
+
+      response = self.class.get("/#{app_id}/cloud_recording/resourceid/#{self.resource_id}/sid/#{self.sid}/mode/#{self.mode}/query",
         basic_auth: auth,
         headers: { 'Content-Type' => 'application/json' },
       )
@@ -83,7 +94,8 @@ module AgoraRails
     end
 
 
-    def generate_token(channel_name = nil, uid = nil)
+    def generate_token(opts = {})
+      channel_name, uid = opts.values_at(:channel_name, :uid)
       self.channel_name = channel_name if channel_name
       self.uid = uid if uid
 
@@ -122,7 +134,7 @@ module AgoraRails
             bucket: AgoraRails.configuration.bucket,
             accessKey: AgoraRails.configuration.access_key,
             secretKey: AgoraRails.configuration.secret_key,
-            fileNamePrefix: AgoraRails.configuration.file_prefix,
+            fileNamePrefix: file_prefix.map(&:to_s), # convert to array of strings
           },
         },
       }
