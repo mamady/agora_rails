@@ -1,5 +1,4 @@
 require_relative "agora_rails/configuration"
-require_relative "agora_rails/token_generator"
 require_relative "agora_rails/cloud_recording"
 require_relative "agora_rails/stt"
 

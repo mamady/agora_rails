@@ -8,4 +8,5 @@ AgoraRails.configure do |config|
   config.bucket = "YOUR_BUCKET"
   config.access_key = "YOUR_ACCESS_KEY"
   config.secret_key = "YOUR_SECRET_KEY"
+  config.file_prefix = "YOUR_FILE_PREFIX"
 end
